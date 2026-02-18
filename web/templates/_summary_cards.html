@@ -1,0 +1,16 @@
+{{define "summary_cards"}}
+<div class="cards stagger">
+<div class="card"><div class="v" data-live="duration">{{.Duration}}</div><div class="l">Duration</div></div>
+<div class="card"><div class="v">{{.TradeCount}}</div><div class="l">Trades</div></div>
+<div class="card"><div class="v g">{{.Wins}}</div><div class="l">Wins</div></div>
+<div class="card"><div class="v r">{{.Losses}}</div><div class="l">Losses</div></div>
+{{if gt .Pending 0}}
+<div class="card"><div class="v y">{{.Pending}}</div><div class="l">Pending</div></div>
+{{end}}
+{{if .HasResolved}}
+<div class="card"><div class="v" style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</div><div class="l">Win Rate</div></div>
+<div class="card card-pnl" style="border-left-color:{{pnlFmtColor .TotalPnL}}"><div class="v" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</div><div class="l">Total P&amp;L</div></div>
+<div class="card"><div class="v" style="color:{{pnlFmtColor .AvgPnL}}">{{fmtPnL .AvgPnL}}</div><div class="l">Avg P&amp;L</div></div>
+{{end}}
+</div>
+{{end}}

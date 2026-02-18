@@ -1,0 +1,19 @@
+{{define "risk_cards"}}
+<div class="mb-5"><h2 class="sec-title">Risk Metrics</h2><div class="cards stagger">
+<div class="card"><div class="v" style="color:{{sharpeColor .Metrics.SharpeRatio}}">{{fmtFloat2 .Metrics.SharpeRatio}}</div><div class="l">Sharpe Ratio</div></div>
+<div class="card"><div class="v r">{{fmtPrice2 .Metrics.MaxDrawdown}}</div><div class="l">Max Drawdown</div></div>
+{{if gt .Metrics.MaxDrawdownPct 0}}
+<div class="card"><div class="v r">{{fmtPct .Metrics.MaxDrawdownPct}}</div><div class="l">Max DD %</div></div>
+{{end}}
+<div class="card"><div class="v" style="color:{{profitFactorColor .Metrics.ProfitFactor}}">{{fmtFloat2 .Metrics.ProfitFactor}}</div><div class="l">Profit Factor</div></div>
+<div class="card"><div class="v" style="color:{{pnlFmtColor .Metrics.Expectancy}}">{{fmtPnL .Metrics.Expectancy}}</div><div class="l">Expectancy</div></div>
+<div class="card"><div class="v" style="color:{{profitFactorColor .Metrics.WinLossRatio}}">{{fmtFloat2 .Metrics.WinLossRatio}}</div><div class="l">Win/Loss Ratio</div></div>
+<div class="card"><div class="v g">{{fmtPrice2 .Metrics.AvgWin}}</div><div class="l">Avg Win</div></div>
+<div class="card"><div class="v r">{{fmtPrice2 .Metrics.AvgLoss}}</div><div class="l">Avg Loss</div></div>
+<div class="card"><div class="v r">{{.Metrics.MaxConsecLoss}}</div><div class="l">Max Consec Loss</div></div>
+<div class="card"><div class="v g">{{.Metrics.MaxConsecWins}}</div><div class="l">Max Consec Win</div></div>
+{{if ne .Metrics.RecoveryFactor 0.0}}
+<div class="card"><div class="v" style="color:{{profitFactorColor .Metrics.RecoveryFactor}}">{{fmtFloat2 .Metrics.RecoveryFactor}}</div><div class="l">Recovery Factor</div></div>
+{{end}}
+</div></div>
+{{end}}

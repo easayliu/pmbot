@@ -1,0 +1,44 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+build/
+dist/
+
+# Test artifacts
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Runtime config (contains secrets)
+config.yaml
+.env
+.env.*
+
+# Go
+go.work
+go.work.sum
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/

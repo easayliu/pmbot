@@ -1,0 +1,13 @@
+{{define "layout"}}<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<script>(function(){var t=localStorage.getItem('theme');if(!t)t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.dataset.theme=t})()</script>
+<style>body:not(.ready){opacity:0}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/paper.css">
+<script src="https://unpkg.com/morphdom@2.7.4/dist/morphdom-umd.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Outfit','system-ui','sans-serif'],mono:['JetBrains Mono','ui-monospace','monospace']},colors:{base:'var(--bg-base)',surface:'var(--bg-surface)',elevated:'var(--bg-elevated)'},borderColor:{DEFAULT:'var(--border)'}}}}</script>
+</head>{{end}}

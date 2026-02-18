@@ -1,0 +1,103 @@
+# pmbot configuration example
+# Copy this file to config.yaml and edit as needed.
+#   cp config.yaml.example config.yaml
+#
+# Environment variables (not in this file):
+#   POLYMARKET_PRIVATE_KEY  - your Polymarket wallet private key
+
+# dry_run: true = paper trading only, no real orders placed.
+dry_run: true
+
+# HTTP report server bind address.
+report_addr: ":8686"
+
+# Max historical paper sessions to keep in DB (default 10).
+max_paper_sessions: 10
+
+market:
+  # Event slug supports templates:
+  #   {today}      -> "month-day" (e.g., "february-19")
+  #   {5m_window}  -> Unix timestamp of the current 5-minute window start (floor-aligned)
+  event_slug: "btc-updown-5m-{5m_window}"
+  # timezone: "America/New_York"  # IANA timezone for {today} resolution (default: America/New_York)
+
+feed:
+  # Default: Polymarket RTDS Chainlink feed.
+  # Automatically connects to Polymarket's RTDS WebSocket for Chainlink BTC/USD -
+  # the exact data source used for 5m Up/Down settlement. No config needed.
+  #
+  # To use Binance instead (not recommended - may disagree with settlement):
+  # polymarket_oracle: false
+  # binance_symbol: "BTCUSDT"
+  # poll_interval_sec: 1
+
+# Live order execution parameters (only relevant when dry_run=false).
+# All fields have sensible defaults; omit the section entirely for defaults.
+# execution:
+#   max_daily_orders: 50          # circuit breaker: max orders per day
+#   max_daily_amount: 1000.0      # circuit breaker: max USDC per day
+#   max_window_retries: 3         # max FAK retries per slot per 5m window
+#   retry_cooldown_sec: 1         # seconds between FAK retries
+#   max_slippage_pct: 0.03        # max price deviation from signal (0.03 = 3%)
+#   fak_price_buffer_ticks: 2     # ticks above best ask for FAK BUY orders
+
+strategy:
+  name: "btc_updown"
+  params:
+    max_cost: "1.00"                  # max cost per order ($)
+
+    # --- Core trend-following parameters ---
+    trend_threshold: "20"             # fixed threshold ($), only used when vol_sigma=0 (fallback)
+    min_elapsed_sec: "40"             # wait at least N seconds into window before trading
+    min_elapsed_floor_sec: "10"       # absolute minimum elapsed even with strong signal
+    elapsed_price_ref: "0.50"         # per-slot elapsed scaling reference price (0=disabled)
+    vol_sigma: "1.0"                  # threshold = max(min_threshold, vs * vol * sqrt(elapsed)) (0=use fixed trend_threshold)
+    min_threshold: "6"                # absolute floor for vol-adjusted threshold ($)
+    accel_decay_vol: "2.0"            # reject if |decel| > N * vol * sqrt(60) (0=disabled)
+    trend_confirm: "1m"               # rolling trend confirmation: "1m" (responsive) or "5m" (conservative)
+    trend_discount: "0.6"             # threshold discount when rolling trend confirms (1.0=disabled)
+
+    # --- Late-window sniper mode ---
+    # Enter in the final seconds of the window when direction is highly certain.
+    # Skips rolling trend and momentum decay checks for faster decision.
+    # Set late_window_sec=0 to disable.
+    late_window_sec: "60"             # activate in last N seconds of window
+    late_window_threshold_mul: "0.3"  # threshold = base * mul (0.3 = 30% of normal)
+
+    # --- Mean reversion mode ---
+    # Trade counter-trend when a sharp early move shows reversal signs.
+    # Triggers when |change| > N*sigma AND rolling 1m trend has reversed.
+    # Only active in first mean_rev_max_elapsed_sec seconds of window.
+    # Set mean_rev_sigma=0 to disable.
+    mean_rev_sigma: "2.5"             # sigma multiplier for sharp move detection
+    mean_rev_max_elapsed_sec: "120"   # only active in first N seconds of window
+
+    # --- Streak reversal bias ---
+    # After N consecutive same-direction windows, lower threshold for
+    # counter-streak direction (mean reversion between windows).
+    # Set streak_len=0 to disable.
+    streak_len: "3"                   # minimum consecutive same-direction windows
+    streak_discount: "0.6"            # threshold multiplier for counter-streak direction
+
+    # --- Minimum signal strength filter ---
+    # Reject signals where |candle_change| / threshold < this value.
+    # Filters marginal ~50/50 signals. Higher = more conservative.
+    # Set 0 to disable.
+    min_signal_strength: "1.2"        # minimum strength to trade (1.0 = at threshold)
+
+    # --- Fair value gate ---
+    # Theoretical fair price: P(Up) = Φ(Δ / (σ × √t)).
+    # Only enter when fair_value - market_ask >= edge.
+    # Set 0 to disable (backward compatible).
+    fair_value_edge: "0.05"           # minimum EV edge to enter (0=disabled)
+
+    # --- Entry prices ---
+    # Maximum ask price willing to pay (limit order ceiling); fills at actual market ask.
+    # Each price is evaluated as an independent slot with separate tracking.
+    # - High prices (0.9+): require >90% win rate to profit, very hard
+    # - Mid prices (0.4-0.6): need ~50-60% WR, best for trend strategies
+    # - Low prices (0.1-0.3): low cost per trade, good for mean reversion
+    entry_prices: "0.7,0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3"
+    # Subset of entry_prices that place real orders (when dry_run=false).
+    # Omit or leave empty = all paper-only (record only, no orders).
+    # live_prices: "0.50"

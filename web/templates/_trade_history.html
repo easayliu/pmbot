@@ -1,0 +1,47 @@
+{{define "trade_history"}}
+{{if .Trades}}
+<div class="mb-7"><h2 class="sec-title">Trade History</h2>
+<div class="hidden md:block overflow-x-auto">
+<table><tr><th>#</th><th>Time</th><th>Side</th><th>Price</th><th class="hide-mob hide-tablet">Chg5m</th><th class="hide-mob hide-tablet">Remaining</th><th>Result</th><th>P&amp;L</th></tr>
+{{range .Trades}}
+{{if .Resolved}}
+<tr><td>{{.Number}}</td><td class="m">{{.Time}}</td><td>{{if eq .Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}</td><td class="m">{{fmtPrice .BuyPrice}}</td>
+<td class="m hide-mob hide-tablet">{{fmtChange .Change5m}}</td><td class="m hide-mob hide-tablet">{{.Remaining}}s</td><td>{{if eq .FinalDir "early_exit"}}<span class="badge be">EXIT</span> → <span class="m">{{fmtPrice .SellPrice}}</span>{{else}}{{if .Won}}<span class="badge bw">WIN</span>{{else}}<span class="badge bl">LOSS</span>{{end}} → {{if eq .FinalDir "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}{{end}}</td>
+<td class="m" style="color:{{pnlFmtColor .PnL}}">{{fmtPnL .PnL}}</td></tr>
+{{else}}
+<tr><td>{{.Number}}</td><td class="m">{{.Time}}</td><td>{{if eq .Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}</td><td class="m">{{fmtPrice .BuyPrice}}</td>
+<td class="m hide-mob hide-tablet">{{fmtChange .Change5m}}</td><td class="m hide-mob hide-tablet">{{.Remaining}}s</td>
+<td><span class="badge bp">PENDING</span></td><td class="dim">—</td></tr>
+{{end}}
+{{end}}
+</table></div>
+<div class="md:hidden space-y-2">
+{{range .Trades}}
+<div class="mob-card">
+<div class="flex items-center justify-between mb-1.5">
+<div class="flex items-center gap-1.5 text-xs">
+<span class="text-slate-500">#{{.Number}}</span>
+{{if eq .Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}
+{{if .Live}}<span class="badge blv">LIVE</span>{{end}}
+</div>
+<span class="m text-xs">{{fmtPrice .BuyPrice}}</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-1.5">
+{{if .Resolved}}
+{{if eq .FinalDir "early_exit"}}<span class="badge be">EXIT</span><span class="text-slate-500">→</span><span class="m">{{fmtPrice .SellPrice}}</span>{{else}}{{if .Won}}<span class="badge bw">WIN</span>{{else}}<span class="badge bl">LOSS</span>{{end}}<span class="text-slate-500">→</span>{{if eq .FinalDir "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}{{end}}
+{{else}}
+<span class="badge bp">PENDING</span>
+{{end}}
+</div>
+<div class="flex items-center gap-2">
+<span class="m text-[11px] text-slate-400">{{.Time}}</span>
+{{if .Resolved}}<span class="m font-semibold" style="color:{{pnlFmtColor .PnL}}">{{fmtPnL .PnL}}</span>{{else}}<span class="dim">—</span>{{end}}
+</div>
+</div>
+</div>
+{{end}}
+</div>
+</div>
+{{end}}
+{{end}}

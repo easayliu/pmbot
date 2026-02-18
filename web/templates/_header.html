@@ -1,0 +1,61 @@
+{{define "header"}}
+<header class="sticky top-0 z-50 bg-base border-b border-slate-800/60" style="padding-top:env(safe-area-inset-top)">
+<div class="hdr-wrap">
+<!-- Brand -->
+<div class="flex items-center gap-1.5 flex-shrink-0">
+<span class="inline-block w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0" style="animation:pulse-dot 2s ease-in-out infinite"></span>
+<span class="text-xs sm:text-sm font-semibold text-slate-300 tracking-wide">PMBOT</span>
+{{if .DryRun}}<span class="badge" style="font-size:9px;background:rgba(234,179,8,0.15);color:#eab308;border:1px solid rgba(234,179,8,0.3)">DRY RUN</span>{{end}}
+</div>
+<!-- Stats: wraps to row 2 on mobile -->
+<div class="hdr-stats">
+{{if .HasLive}}
+<div class="flex items-center gap-2 sm:gap-3{{if .HasPaper}} border-r border-slate-700 pr-3 sm:pr-4{{end}}">
+<span class="badge blv" style="font-size:9px">LIVE</span>
+{{if .LiveStats.HasResolved}}
+<span class="m text-sm sm:text-lg font-bold" style="color:{{pnlFmtColor .LiveStats.TotalPnL}}">{{fmtPnL .LiveStats.TotalPnL}}</span>
+<div class="hidden sm:flex items-baseline gap-1"><span class="m text-sm font-bold" style="color:{{wrColor .LiveStats.WinRate}}">{{fmtPct .LiveStats.WinRate}}</span><span class="text-[10px] uppercase tracking-wider text-slate-500">Win</span></div>
+<div class="hidden sm:flex items-baseline gap-1"><span class="m text-sm font-semibold text-slate-200">{{.LiveStats.Trades}}</span><span class="text-[10px] uppercase tracking-wider text-slate-500">Trades</span></div>
+{{else}}
+<span class="text-xs text-slate-500">Waiting</span>
+{{end}}
+</div>
+{{end}}
+{{if .HasPaper}}
+<div class="flex items-center gap-2 sm:gap-3">
+<span class="badge bp" style="font-size:9px">PAPER</span>
+{{if .PaperStats.HasResolved}}
+<span class="m text-sm sm:text-lg font-bold" style="color:{{pnlFmtColor .PaperStats.TotalPnL}}">{{fmtPnL .PaperStats.TotalPnL}}</span>
+<div class="hidden sm:flex items-baseline gap-1"><span class="m text-sm font-bold" style="color:{{wrColor .PaperStats.WinRate}}">{{fmtPct .PaperStats.WinRate}}</span><span class="text-[10px] uppercase tracking-wider text-slate-500">Win</span></div>
+<div class="hidden sm:flex items-baseline gap-1"><span class="m text-sm font-semibold text-slate-200">{{.PaperStats.Trades}}</span><span class="text-[10px] uppercase tracking-wider text-slate-500">Trades</span></div>
+{{else}}
+<span class="text-xs text-slate-500">Waiting</span>
+{{end}}
+</div>
+{{end}}
+{{if not .HasLive}}{{if not .HasPaper}}
+{{if .HasResolved}}
+<div class="flex items-baseline gap-1"><span class="m text-sm sm:text-lg font-bold" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</span></div>
+<div class="flex items-baseline gap-1"><span class="m text-sm font-bold" style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</span><span class="hidden sm:inline text-[10px] uppercase tracking-wider text-slate-500">Win</span></div>
+{{else}}
+<span class="text-xs text-slate-500">Waiting</span>
+{{end}}
+<div class="hidden sm:flex items-baseline gap-1.5"><span class="m text-sm font-semibold text-slate-200">{{.TradeCount}}</span><span class="text-[10px] uppercase tracking-wider text-slate-500">Trades</span></div>
+{{end}}{{end}}
+<div class="hidden sm:flex items-baseline gap-1.5"><span class="m text-sm font-semibold text-slate-200" data-live="duration">{{.Duration}}</span><span class="text-[10px] uppercase tracking-wider text-slate-500">Uptime</span></div>
+</div>
+<!-- Nav + Toggle -->
+<div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+<nav class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm{{if ne .ActivePage "backtest"}} sm:border-l sm:border-slate-700 sm:pl-4{{end}}">
+<a href="/paper" class="{{if eq .ActivePage "paper"}}text-slate-200 font-medium{{else}}text-slate-500 hover:text-slate-300 transition-colors{{end}}">Paper</a>
+<a href="/backtest" class="{{if eq .ActivePage "backtest"}}text-slate-200 font-medium{{else}}text-slate-500 hover:text-slate-300 transition-colors{{end}}">Backtest</a>
+<a href="/data" class="text-slate-500 hover:text-slate-300 transition-colors">Data</a>
+</nav>
+<button class="theme-toggle flex-shrink-0" onclick="toggleTheme()" title="Toggle theme">
+<svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+<svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
+</div>
+</div>
+</header>
+{{end}}

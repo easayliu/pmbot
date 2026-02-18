@@ -1,0 +1,92 @@
+{{define "history"}}
+{{if .HasHistory}}
+<div class="mb-7"><h2 class="sec-title">Historical Sessions</h2>
+{{range .HistorySessions}}
+<details class="mb-2 bg-surface border border-slate-800/50 rounded-lg px-3 py-1">
+<summary class="py-2.5 text-slate-100 list-none">
+<div class="hidden sm:block text-[13px]">
+<span class="m text-slate-300">{{.SessionID}}</span> <span class="text-slate-600">·</span> <span class="m text-slate-300">{{.StartedAt}}</span> <span class="text-slate-600">·</span> <span class="m text-slate-300">{{.Duration}}</span> <span class="text-slate-600">·</span> <span class="text-slate-400">{{.Trades}} trades</span> <span class="text-slate-600">·</span> <span class="g">{{.Wins}}</span>W/<span class="r">{{.Losses}}</span>L <span class="text-slate-600">·</span> <span style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</span> <span class="text-slate-600">·</span> <span class="m" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</span>
+</div>
+<div class="sm:hidden">
+<div class="flex justify-between items-center mb-1"><span class="m text-xs text-slate-300">{{.SessionID}}</span><span class="m text-sm font-bold" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</span></div>
+<div class="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]"><span class="m text-slate-400">{{.StartedAt}}</span><span class="m text-slate-400">{{.Duration}}</span><span><span class="g">{{.Wins}}</span>W/<span class="r">{{.Losses}}</span>L</span><span style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</span></div>
+</div>
+</summary>
+{{if .FetchError}}
+<p class="text-slate-500 py-2">Failed to load trades.</p>
+{{else}}
+{{if .SlotSummaries}}
+<div class="py-2"><span class="text-xs font-medium text-slate-400">Per-Slot Summary</span>
+<div class="hidden md:block">
+<table class="mt-1.5"><tr><th>Slot</th><th>Trades</th><th>Wins</th><th>Losses</th><th>Win Rate</th><th>P&amp;L</th></tr>
+{{range .SlotSummaries}}
+<tr><td class="m">{{.Slot}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}</td><td>{{.Trades}}</td><td class="g">{{.Wins}}</td><td class="r">{{.Losses}}</td>
+<td style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</td>
+<td class="m" style="color:{{pnlFmtColor .PnL}}">{{fmtPnL .PnL}}</td></tr>
+{{end}}
+</table></div>
+<div class="md:hidden space-y-2 mt-1.5">
+{{range .SlotSummaries}}
+<div class="mob-card">
+<div class="flex justify-between items-center mb-1"><span class="m text-sm">{{.Slot}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}</span><span class="m font-bold" style="color:{{pnlFmtColor .PnL}}">{{fmtPnL .PnL}}</span></div>
+<div class="flex gap-3 text-xs">
+<span><span class="g">{{.Wins}}</span>W / <span class="r">{{.Losses}}</span>L</span>
+<span style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</span>
+<span class="text-slate-500">{{.Trades}} trades</span>
+</div>
+</div>
+{{end}}
+</div>
+</div>
+{{end}}
+{{if .HasTrades}}
+<details class="pb-2"><summary class="text-xs text-slate-400 py-1.5">Trade Details <span class="text-slate-500">({{len .TradeDetails}})</span></summary>
+<div class="hidden md:block">
+<table class="mt-1.5"><tr><th>#</th><th>Time</th><th class="hide-mob">Slot</th><th>Side</th><th>Price</th><th class="hide-mob hide-tablet">Chg5m</th><th class="hide-mob hide-tablet">Remaining</th><th>Result</th><th>P&amp;L</th></tr>
+{{range .TradeDetails}}
+{{if .Resolved}}
+<tr><td>{{.Number}}</td><td class="m">{{.Time}}</td><td class="m hide-mob">{{.SlotLabel}}</td><td style="color:{{sideColor .Side}}">{{.Side}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}</td><td class="m">{{fmtPrice .BuyPrice}}</td>
+<td class="m hide-mob hide-tablet">{{fmtChange .Change5m}}</td><td class="m hide-mob hide-tablet">{{.Remaining}}s</td><td>{{if .Won}}<span class="badge bw">WIN</span>{{else}}<span class="badge bl">LOSS</span>{{end}} → {{.FinalDir}}</td>
+<td class="m" style="color:{{pnlFmtColor .PnL}}">{{fmtPnL .PnL}}</td></tr>
+{{else}}
+<tr><td>{{.Number}}</td><td class="m">{{.Time}}</td><td class="m hide-mob">{{.SlotLabel}}</td><td style="color:{{sideColor .Side}}">{{.Side}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}</td><td class="m">{{fmtPrice .BuyPrice}}</td>
+<td class="m hide-mob hide-tablet">{{fmtChange .Change5m}}</td><td class="m hide-mob hide-tablet">{{.Remaining}}s</td>
+<td><span class="badge bp">PENDING</span></td><td class="dim">—</td></tr>
+{{end}}
+{{end}}
+</table></div>
+<div class="md:hidden space-y-2 mt-1.5">
+{{range .TradeDetails}}
+<div class="mob-card">
+<div class="flex items-center justify-between mb-1.5">
+<div class="flex items-center gap-1.5 text-xs">
+<span class="text-slate-500">#{{.Number}}</span>
+<span style="color:{{sideColor .Side}}">{{.Side}}</span>
+{{if .Live}}<span class="badge blv">LIVE</span>{{end}}
+</div>
+<span class="m text-xs">{{fmtPrice .BuyPrice}}</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-1.5">
+{{if .Resolved}}
+{{if .Won}}<span class="badge bw">WIN</span>{{else}}<span class="badge bl">LOSS</span>{{end}}<span class="text-slate-500">→ {{.FinalDir}}</span>
+{{else}}
+<span class="badge bp">PENDING</span>
+{{end}}
+</div>
+<div class="flex items-center gap-2">
+<span class="m text-[11px] text-slate-400">{{.Time}}</span>
+{{if .Resolved}}<span class="m font-semibold" style="color:{{pnlFmtColor .PnL}}">{{fmtPnL .PnL}}</span>{{else}}<span class="dim">—</span>{{end}}
+</div>
+</div>
+</div>
+{{end}}
+</div>
+</details>
+{{end}}
+{{end}}
+</details>
+{{end}}
+</div>
+{{end}}
+{{end}}

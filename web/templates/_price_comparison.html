@@ -1,0 +1,71 @@
+{{define "price_comparison"}}
+<div class="mb-7 overflow-x-auto"><h2 class="sec-title">Price Comparison</h2>
+<div class="hidden md:block">
+<table class="w-full table-auto"><tr><th class="whitespace-nowrap">Entry Price</th><th class="whitespace-nowrap">Trades</th><th class="whitespace-nowrap">Wins</th><th class="whitespace-nowrap">Losses</th><th class="whitespace-nowrap">Win Rate</th><th class="whitespace-nowrap">Total P&amp;L</th><th class="whitespace-nowrap">Avg P&amp;L</th><th class="whitespace-nowrap">Sharpe</th><th class="whitespace-nowrap">Max DD</th><th class="whitespace-nowrap">Profit Factor</th><th class="whitespace-nowrap">Expectancy</th><th class="whitespace-nowrap">Last Trade</th><th></th></tr>
+{{range .Slots}}
+{{if .HasResolved}}
+<tr{{if .IsBest}} class="best"{{end}}><td class="m" style="white-space:nowrap"><span class="inline-flex items-center gap-1.5">{{.Label}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}{{if .IsBest}} <span class="badge bw">BEST</span>{{end}}</span></td><td>{{.Trades}}</td><td class="g">{{.Wins}}</td><td class="r">{{.Losses}}</td>
+<td style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</td>
+<td class="m" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</td>
+<td class="m" style="color:{{pnlFmtColor .AvgPnL}}">{{fmtPnL .AvgPnL}}</td>
+<td class="m" style="color:{{sharpeColor .Metrics.SharpeRatio}}">{{fmtFloat2 .Metrics.SharpeRatio}}</td>
+<td class="m r">{{fmtPrice2 .Metrics.MaxDrawdown}}</td>
+<td class="m" style="color:{{profitFactorColor .Metrics.ProfitFactor}}">{{fmtFloat2 .Metrics.ProfitFactor}}</td>
+<td class="m" style="color:{{pnlFmtColor .Metrics.Expectancy}}">{{fmtPnL .Metrics.Expectancy}}</td>
+{{if .LastTrade}}
+{{if .LastTrade.Resolved}}
+<td class="m" style="font-size:11px;white-space:nowrap">{{.LastTrade.Time}} {{if eq .LastTrade.Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}} @{{fmtFloat2 .LastTrade.BuyPrice}} {{if .LastTrade.Won}}<span class="badge bw">W</span>{{else}}<span class="badge bl">L</span>{{end}} <span style="color:{{pnlFmtColor .LastTrade.PnL}}">{{fmtPnL .LastTrade.PnL}}</span></td>
+{{else}}
+<td class="m" style="font-size:11px;white-space:nowrap">{{.LastTrade.Time}} {{if eq .LastTrade.Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}} @{{fmtFloat2 .LastTrade.BuyPrice}} <span class="badge bp">P</span></td>
+{{end}}
+{{else}}
+<td class="dim">—</td>
+{{end}}
+<td><div class="bar"><span style="width:{{fmtBarWidth (minFloat .WinRate 100)}};background:{{wrColor .WinRate}}"></span></div></td></tr>
+{{else}}
+<tr><td class="m" style="white-space:nowrap"><span class="inline-flex items-center gap-1.5">{{.Label}}{{if .Live}} <span class="badge blv">LIVE</span>{{end}}</span></td><td>{{.Trades}}</td><td class="dim" colspan="10">no resolved trades</td>
+{{if .LastTrade}}
+{{if .LastTrade.Resolved}}
+<td class="m" style="font-size:11px;white-space:nowrap">{{.LastTrade.Time}} {{if eq .LastTrade.Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}} @{{fmtFloat2 .LastTrade.BuyPrice}} {{if .LastTrade.Won}}<span class="badge bw">W</span>{{else}}<span class="badge bl">L</span>{{end}} <span style="color:{{pnlFmtColor .LastTrade.PnL}}">{{fmtPnL .LastTrade.PnL}}</span></td>
+{{else}}
+<td class="m" style="font-size:11px;white-space:nowrap">{{.LastTrade.Time}} {{if eq .LastTrade.Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}} @{{fmtFloat2 .LastTrade.BuyPrice}} <span class="badge bp">P</span></td>
+{{end}}
+{{else}}
+<td class="dim">—</td>
+{{end}}
+</tr>
+{{end}}
+{{end}}
+</table></div>
+<div class="md:hidden space-y-2">
+{{range .Slots}}
+<div class="mob-card" style="border-radius:12px">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-1.5"><span class="text-sm font-bold text-slate-100">{{.Label}}</span>{{if .Live}}<span class="badge blv">LIVE</span>{{end}}{{if .IsBest}}<span class="badge bw">BEST</span>{{end}}</div>
+{{if .HasResolved}}<span class="m font-bold" style="color:{{pnlFmtColor .TotalPnL}};font-size:15px">{{fmtPnL .TotalPnL}}</span>{{end}}
+</div>
+{{if .HasResolved}}
+<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs mb-1.5">
+<span><span class="g">{{.Wins}}</span>W / <span class="r">{{.Losses}}</span>L</span>
+<span style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</span>
+<span class="m" style="color:{{pnlFmtColor .AvgPnL}}">avg {{fmtPnL .AvgPnL}}</span>
+<span class="m" style="color:{{profitFactorColor .Metrics.ProfitFactor}}">PF {{fmtFloat2 .Metrics.ProfitFactor}}</span>
+</div>
+{{else}}
+<div class="text-xs mb-1.5"><span class="dim">{{.Trades}} trades · no resolved</span></div>
+{{end}}
+{{if .LastTrade}}
+<div class="text-[11px] text-slate-300 flex flex-wrap items-center gap-1 gap-x-1.5 mt-1.5 pt-1.5 border-t border-slate-700/50">
+<span style="color:var(--text-muted);font-weight:600;font-size:9px">LAST</span>
+{{if .LastTrade.Resolved}}
+<span class="m">{{.LastTrade.Time}}</span>{{if eq .LastTrade.Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}<span>@<span class="m">{{fmtFloat2 .LastTrade.BuyPrice}}</span></span>{{if .LastTrade.Won}}<span class="badge bw">W</span>{{else}}<span class="badge bl">L</span>{{end}}<span class="m" style="color:{{pnlFmtColor .LastTrade.PnL}}">{{fmtPnL .LastTrade.PnL}}</span>
+{{else}}
+<span class="m">{{.LastTrade.Time}}</span>{{if eq .LastTrade.Side "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}<span>@<span class="m">{{fmtFloat2 .LastTrade.BuyPrice}}</span></span><span class="badge bp">P</span>
+{{end}}
+</div>
+{{end}}
+</div>
+{{end}}
+</div>
+</div>
+{{end}}

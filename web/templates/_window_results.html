@@ -1,0 +1,38 @@
+{{define "window_results"}}
+{{if .HasWindowResults}}
+<div class="mb-7">
+<details>
+<summary class="text-sm text-slate-400 pb-1.5 border-b border-slate-700 cursor-pointer list-none flex items-center gap-2">
+<svg class="w-3 h-3 transition-transform duration-200 details-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
+Window Results <span class="text-slate-500">— {{.WindowCount}} windows (<span class="g">{{.WindowUpCount}} Up</span> / <span class="r">{{.WindowDownCount}} Down</span>)</span>
+</summary>
+<div class="hidden md:block overflow-x-auto mt-2.5">
+<table><tr><th>End Time</th><th>Direction</th><th>Signal</th><th>BTC Open</th><th>BTC Close</th><th>Change</th><th>Traded</th></tr>
+{{range .WindowResults}}
+<tr><td class="m">{{.EndTime}}</td><td>{{if eq .Direction "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}</td><td>{{if eq .MarketSignal "Up"}}<span class="badge bw">UP</span>{{else if eq .MarketSignal "Down"}}<span class="badge bl">DOWN</span>{{else}}<span class="dim">—</span>{{end}}</td><td class="m">{{fmtBTC .BTCOpen}}</td><td class="m">{{fmtBTC .BTCClose}}</td><td class="m {{if isNegative .Change}}r{{else}}g{{end}}">{{fmtChange .Change}}</td><td>{{if .TradedSlots}}<span class="inline-flex flex-wrap gap-1">{{range .TradedSlots}}<span class="badge {{if .Won}}bw{{else}}bl{{end}}">{{.Label}} {{if .Won}}W{{else}}L{{end}}</span>{{end}}</span>{{else}}<span class="dim">—</span>{{end}}</td></tr>
+{{end}}
+</table></div>
+<div class="md:hidden space-y-2 mt-2.5">
+{{range .WindowResults}}
+<div class="mob-card win-mob">
+<div class="flex justify-between items-center">
+<span class="m text-[11px] text-slate-400">{{.EndTime}}</span>
+<div class="flex items-center gap-1">
+<span class="win-label">dir</span>{{if eq .Direction "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}
+{{if .MarketSignal}}<span class="win-label" style="margin-left:4px">sig</span>{{if eq .MarketSignal "Up"}}<span class="badge bw">UP</span>{{else}}<span class="badge bl">DOWN</span>{{end}}{{end}}
+</div>
+</div>
+<div class="win-price-row">
+<span class="m text-slate-300">{{fmtBTC .BTCOpen}}</span><span class="text-slate-600">→</span><span class="m text-slate-300">{{fmtBTC .BTCClose}}</span>
+<span class="m font-semibold {{if isNegative .Change}}r{{else}}g{{end}} ml-auto">{{fmtChange .Change}}</span>
+</div>
+{{if .TradedSlots}}<div class="win-slots">
+{{range .TradedSlots}}<span class="badge {{if .Won}}bw{{else}}bl{{end}}">{{.Label}} {{if .Won}}W{{else}}L{{end}}</span>{{end}}
+</div>{{end}}
+</div>
+{{end}}
+</div>
+</details>
+</div>
+{{end}}
+{{end}}

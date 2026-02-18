@@ -1,0 +1,26 @@
+{{define "bucket_table"}}
+{{if .Rows}}
+<div class="mb-7 overflow-x-auto"><h2 class="sec-title">{{.Title}}</h2>
+<div class="hidden md:block">
+<table><tr><th>Range</th><th>Trades</th><th>Wins</th><th>Losses</th><th>Win Rate</th><th>P&amp;L</th><th class="hide-mob"></th></tr>
+{{range .Rows}}
+<tr><td class="m">{{.Label}}</td><td>{{.Trades}}</td><td class="g">{{.Wins}}</td><td class="r">{{.Losses}}</td>
+<td style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</td><td class="m" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</td>
+<td class="hide-mob"><div class="bar"><span style="width:{{fmtBarWidth .WinRate}};background:{{wrColor .WinRate}}"></span></div></td></tr>
+{{end}}
+</table></div>
+<div class="md:hidden space-y-2">
+{{range .Rows}}
+<div class="mob-card">
+<div class="flex justify-between items-center mb-1.5"><span class="m text-sm">{{.Label}}</span><span style="color:{{wrColor .WinRate}}" class="m font-bold text-sm">{{fmtPct .WinRate}}</span></div>
+<div class="flex justify-between items-center text-xs mb-2">
+<span><span class="g">{{.Wins}}</span>W / <span class="r">{{.Losses}}</span>L</span>
+<span class="m" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</span>
+</div>
+<div class="w-full h-1.5 rounded-full overflow-hidden" style="background:var(--bar-track)"><span class="block h-full rounded-full transition-all duration-300" style="width:{{fmtBarWidth .WinRate}};background:{{wrColor .WinRate}}"></span></div>
+</div>
+{{end}}
+</div>
+</div>
+{{end}}
+{{end}}

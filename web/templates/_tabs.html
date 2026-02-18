@@ -1,0 +1,36 @@
+{{define "tabs"}}
+<div class="relative">
+<input type="radio" name="tabs" id="tab1" class="tab-radio" checked>
+<input type="radio" name="tabs" id="tab2" class="tab-radio">
+<input type="radio" name="tabs" id="tab3" class="tab-radio">
+<input type="radio" name="tabs" id="tab4" class="tab-radio">
+<div class="tab-bar">
+<label for="tab1" class="tab-label">Analysis</label>
+<label for="tab2" class="tab-label">Trades</label>
+<label for="tab3" class="tab-label">Windows</label>
+<label for="tab4" class="tab-label">History</label>
+</div>
+<div class="border-b border-slate-800/50 mb-4 md:mb-6"></div>
+<div class="tab-panels">
+<div class="panel panel-1">
+{{if .HasResolved}}
+{{template "bucket_table" dict "Title" "Win Rate by Buy Price" "Rows" .PriceBuckets}}
+{{template "bucket_table" dict "Title" "Win Rate by |Change5m|" "Rows" .ChangeBuckets}}
+{{template "bucket_table" dict "Title" "Win Rate by Direction" "Rows" .DirectionBuckets}}
+{{template "bucket_table" dict "Title" "Win Rate by Entry Timing" "Rows" .TimingBuckets}}
+{{template "profitability" .}}
+{{end}}
+{{.EquitySVG}}
+</div>
+<div class="panel panel-2">
+{{template "trade_history" .}}
+</div>
+<div class="panel panel-3">
+{{template "window_results" .}}
+</div>
+<div class="panel panel-4">
+{{template "history" .}}
+</div>
+</div>
+</div>
+{{end}}

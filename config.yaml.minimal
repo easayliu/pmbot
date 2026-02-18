@@ -1,0 +1,30 @@
+# pmbot minimal configuration — simplest live trading setup.
+# Only core parameters, no optional strategies (A/B/C all disabled).
+#
+# Environment variables:
+#   POLYMARKET_PRIVATE_KEY  - your Polymarket wallet private key
+
+dry_run: false  # true = paper only, false = real orders for live_prices slots
+
+market:
+  event_slug: "btc-updown-5m-{5m_window}"
+
+feed: {}
+  # Default: Polymarket RTDS Chainlink (matches settlement oracle).
+  # No config needed — just leave feed empty.
+
+strategy:
+  name: "btc_updown"
+  params:
+    max_cost: "1.00"             # max cost per order ($)
+    trend_threshold: "10"        # minimum 5m candle change ($) to confirm trend
+    min_elapsed_sec: "20"        # wait at least 20s into window before trading
+    min_elapsed_floor_sec: "15"  # absolute minimum elapsed even with strong signal
+    elapsed_price_ref: "0"       # per-slot elapsed scaling (0=disabled)
+    vol_sigma: "0"               # 0 = use fixed trend_threshold (no adaptive)
+    min_threshold: "10"          # absolute floor for vol-adjusted threshold ($)
+    accel_decay_vol: "0"         # 0 = disabled
+    trend_confirm: "1m"          # rolling trend confirmation window
+    trend_discount: "0.7"        # threshold discount when rolling trend confirms
+    entry_prices: "0.95"         # only buys when ask=0.95 (each slot auto-binds its own price)
+    live_prices: "0.95"          # this slot places real orders
