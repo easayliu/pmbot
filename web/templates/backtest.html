@@ -1,0 +1,319 @@
+{{define "backtest_content"}}
+{{template "header" .}}
+
+<main class="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-8">
+<!-- Page title -->
+<div class="mb-4 md:mb-6">
+<h1 class="text-base sm:text-lg md:text-2xl font-bold text-slate-100 mb-1">{{.Title}}</h1>
+<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+<span class="text-slate-400"><span class="m text-slate-200">{{.WindowCount}}</span> windows</span>
+<span class="text-slate-600">&middot;</span>
+<span class="text-slate-400"><span class="m text-slate-200">{{.Period}}</span></span>
+<span class="text-slate-600">&middot;</span>
+<span class="text-slate-400"><span class="m text-slate-200">{{.Timestamp}}</span></span>
+</div>
+</div>
+
+<!-- Sweep form -->
+<form method="GET" action="/backtest" id="backtestForm" class="bg-surface border rounded-xl p-3 md:p-4 mb-5 md:mb-6">
+<input type="hidden" name="params" id="paramsInput" value="{{.ParamsSpec}}">
+<div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+<div class="flex-1">
+<label class="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider font-medium">Parameter Sweep</label>
+<input name="sweep" type="text"
+  placeholder="fair_value_edge=0:0.10:0.02,vol_sigma=0.5:2.0:0.5"
+  value="{{.SweepSpec}}"
+  class="w-full bg-elevated border rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+</div>
+<div class="w-24 sm:w-28">
+<label class="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider font-medium">Split</label>
+<input name="split" type="text"
+  placeholder="0.7"
+  value="{{if .HasSplit}}{{printf "%.2f" .SplitRatio}}{{end}}"
+  class="w-full bg-elevated border rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+</div>
+<div class="w-32 sm:w-36">
+<label class="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider font-medium">From</label>
+<input name="from" type="date"
+  value="{{.FromStr}}"
+  class="w-full bg-elevated border rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+</div>
+<div class="w-32 sm:w-36">
+<label class="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider font-medium">To</label>
+<input name="to" type="date"
+  value="{{.ToStr}}"
+  class="w-full bg-elevated border rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+</div>
+<div class="w-32 sm:w-40">
+<label class="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider font-medium">Walk-Forward</label>
+<input name="wf" type="text"
+  placeholder="500:200:200"
+  value="{{if .WFSpec}}{{.WFSpec}}{{end}}"
+  class="w-full bg-elevated border rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+</div>
+<button type="submit" class="px-5 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-colors flex-shrink-0">Run</button>
+</div>
+{{if .ParamGroups}}
+<details class="mt-3"{{if .ParamsSpec}} open{{end}}>
+<summary class="text-xs text-slate-400 cursor-pointer hover:text-slate-200 transition-colors uppercase tracking-wider font-medium select-none">Strategy Config Override</summary>
+<div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+{{range .ParamGroups}}
+<div class="bg-elevated border rounded-lg p-3">
+<h3 class="text-xs text-slate-400 uppercase tracking-wider font-medium mb-2">{{.Name}}</h3>
+{{range .Params}}
+<div class="flex items-center gap-2 mb-1.5">
+<label class="text-xs text-slate-500 w-28 shrink-0 truncate" title="{{.Key}}">{{.Label}}</label>
+<input type="text" data-param-key="{{.Key}}" placeholder="{{.Placeholder}}" value="{{.Value}}"
+  class="cfg-input flex-1 min-w-0 bg-base border rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+{{if .ToggleKey}}<span class="text-[10px] text-slate-600 shrink-0">0=off</span>{{end}}
+</div>
+{{end}}
+</div>
+{{end}}
+</div>
+<div class="mt-3 flex gap-2">
+<button type="button" onclick="applyConfigParams()" class="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-500 transition-colors">Apply &amp; Run</button>
+<button type="button" onclick="resetConfigParams()" class="px-4 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 transition-colors">Reset</button>
+</div>
+</details>
+{{end}}
+</form>
+
+{{if .ConfigYAML}}
+<details class="bg-surface border rounded-xl p-3 md:p-4 mb-5 md:mb-6">
+<summary class="text-xs text-slate-400 cursor-pointer hover:text-slate-200 transition-colors uppercase tracking-wider font-medium select-none">Effective Config (YAML)</summary>
+<div class="mt-3 relative">
+<button type="button" onclick="copyConfigYAML(this)" class="absolute top-2 right-2 px-3 py-1 rounded text-xs font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 transition-colors">Copy</button>
+<pre class="bg-elevated border rounded-lg p-4 pr-20 overflow-x-auto text-xs text-slate-200 font-mono leading-relaxed" id="configYAML">{{.ConfigYAML}}</pre>
+</div>
+</details>
+{{end}}
+
+{{if .HasSplit}}
+<div class="bg-surface border border-amber-500/30 rounded-xl p-3 md:p-4 mb-5 md:mb-6">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+<span class="text-amber-400 font-medium">Train/Test Split</span>
+<span class="text-slate-400">Ratio: <span class="m text-slate-200">{{printf "%.2f" .SplitRatio}}</span></span>
+<span class="text-slate-400">Train: <span class="m text-slate-200">{{.TrainWindows}}</span> windows</span>
+<span class="text-slate-400">Test: <span class="m text-slate-200">{{.TestWindows}}</span> windows</span>
+</div>
+</div>
+{{end}}
+
+{{if not .HasResults}}
+<p class="text-slate-500 text-sm">No results. Submit the form above or visit /backtest without params to run with current config.</p>
+{{else}}
+<!-- Summary cards -->
+<div class="cards stagger mb-5 md:mb-6">
+<div class="card">
+<div class="v" style="color:var(--accent)">{{.ConfigCount}}</div>
+<div class="l">Configs</div>
+</div>
+<div class="card">
+<div class="v">{{.TotalTrades}}</div>
+<div class="l">Total Trades</div>
+</div>
+<div class="card">
+<div class="v" style="color:{{pnlFmtColor .BestPnL}}">{{fmtPnL .BestPnL}}</div>
+<div class="l">Best PnL</div>
+</div>
+<div class="card">
+<div class="v" style="color:{{wrColor .BestWinRate}}">{{fmtPct .BestWinRate}}</div>
+<div class="l">Best WR</div>
+</div>
+<div class="card">
+<div class="v" style="color:{{sharpeColor .BestSharpe}}">{{fmtFloat2 .BestSharpe}}</div>
+<div class="l">Best Sharpe</div>
+</div>
+<div class="card">
+<div class="v">{{printf "%+.3f" .BestExpectancy}}</div>
+<div class="l">Best E[T]</div>
+</div>
+</div>
+
+<!-- Results table -->
+<div class="mb-6">
+<h2 class="sec-title">Results (sorted by {{if .HasSplit}}Train {{end}}PnL)</h2>
+<div class="overflow-x-auto -mx-3 sm:mx-0">
+<table class="min-w-[900px] sm:min-w-0">
+<thead>
+<tr>
+<th>#</th>
+<th>Label</th>
+<th>Trades</th>
+<th>Wins</th>
+<th>WR%</th>
+<th>PnL</th>
+<th>Sharpe</th>
+<th>MaxDD</th>
+<th class="hide-mob">PF</th>
+<th class="hide-mob">E[T]</th>
+<th class="hide-mob">AvgWin</th>
+<th class="hide-mob">AvgLoss</th>
+<th class="hide-mob">W/L</th>
+<th class="hide-tablet">MaxW</th>
+<th class="hide-tablet">MaxL</th>
+{{if $.HasSplit}}
+<th style="border-left:2px solid var(--amber-500, #f59e0b);color:#f59e0b">OOS Trades</th>
+<th style="color:#f59e0b">OOS WR%</th>
+<th style="color:#f59e0b">OOS PnL</th>
+<th style="color:#f59e0b">OOS Sharpe</th>
+<th class="hide-mob" style="color:#f59e0b">OOS E[T]</th>
+<th class="hide-mob" style="color:#f59e0b">Degrad%</th>
+{{end}}
+</tr>
+</thead>
+<tbody>
+{{range .Results}}
+<tr{{if .IsBest}} style="background:var(--profit-row-bg)"{{end}}>
+<td class="m">{{.Index}}</td>
+<td class="m text-xs">{{.Label}}</td>
+<td class="m">{{.Trades}}</td>
+<td class="m">{{.Wins}}</td>
+<td class="m" style="color:{{wrColor .WinRate}}">{{fmtPct .WinRate}}</td>
+<td class="m" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnLSigned .TotalPnL}}</td>
+<td class="m" style="color:{{sharpeColor .Sharpe}}">{{fmtFloat2 .Sharpe}}</td>
+<td class="m r">{{fmtPrice2 .MaxDD}}</td>
+<td class="m hide-mob">{{.ProfitFactor}}</td>
+<td class="m hide-mob">{{printf "%+.3f" .Expectancy}}</td>
+<td class="m g hide-mob">{{printf "$%.3f" .AvgWin}}</td>
+<td class="m r hide-mob">{{printf "$%.3f" .AvgLoss}}</td>
+<td class="m hide-mob">{{fmtFloat2 .WinLossRatio}}</td>
+<td class="m hide-tablet">{{.MaxConsecWins}}</td>
+<td class="m hide-tablet">{{.MaxConsecLoss}}</td>
+{{if $.HasSplit}}
+<td class="m" style="border-left:2px solid rgba(245,158,11,0.3)">{{.OOSTrades}}</td>
+<td class="m" style="color:{{wrColor .OOSWinRate}}">{{fmtPct .OOSWinRate}}</td>
+<td class="m" style="color:{{pnlFmtColor .OOSPnL}}">{{fmtPnLSigned .OOSPnL}}</td>
+<td class="m" style="color:{{sharpeColor .OOSSharpe}}">{{fmtFloat2 .OOSSharpe}}</td>
+<td class="m hide-mob">{{printf "%+.3f" .OOSExpectancy}}</td>
+<td class="m hide-mob">{{if gt .PnLDegradation 50.0}}<span style="color:#ef4444">{{printf "%.0f%%" .PnLDegradation}}</span>{{else if gt .PnLDegradation 20.0}}<span style="color:#f59e0b">{{printf "%.0f%%" .PnLDegradation}}</span>{{else}}<span style="color:#22c55e">{{printf "%.0f%%" .PnLDegradation}}</span>{{end}}</td>
+{{end}}
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+</div>
+{{end}}
+
+{{if .Folds}}
+<!-- Walk-Forward Results -->
+<div class="bg-surface border border-purple-500/30 rounded-xl p-3 md:p-4 mb-5 md:mb-6">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+<span class="text-purple-400 font-medium">Walk-Forward Validation</span>
+<span class="text-slate-400">Train: <span class="m text-slate-200">{{.TrainSize}}</span> windows</span>
+<span class="text-slate-400">Test: <span class="m text-slate-200">{{.TestSize}}</span> windows</span>
+<span class="text-slate-400">Step: <span class="m text-slate-200">{{.StepSize}}</span></span>
+</div>
+</div>
+
+<!-- WF Summary cards -->
+<div class="cards stagger mb-5 md:mb-6">
+<div class="card">
+<div class="v" style="color:var(--accent)">{{.FoldCount}}</div>
+<div class="l">Folds</div>
+</div>
+<div class="card">
+<div class="v">{{.TotalOOSTrades}}</div>
+<div class="l">OOS Trades</div>
+</div>
+<div class="card">
+<div class="v" style="color:{{pnlFmtColor .TotalOOSPnL}}">{{fmtPnLSigned .TotalOOSPnL}}</div>
+<div class="l">Total OOS PnL</div>
+</div>
+<div class="card">
+<div class="v" style="color:{{wrColor .AvgOOSWinRate}}">{{fmtPct .AvgOOSWinRate}}</div>
+<div class="l">Avg OOS WR</div>
+</div>
+<div class="card">
+<div class="v" style="color:{{sharpeColor .AvgOOSSharpe}}">{{fmtFloat2 .AvgOOSSharpe}}</div>
+<div class="l">Avg OOS Sharpe</div>
+</div>
+<div class="card">
+<div class="v" style="{{if gt .ParamStability 70.0}}color:#22c55e{{else if gt .ParamStability 40.0}}color:#f59e0b{{else}}color:#ef4444{{end}}">{{printf "%.0f%%" .ParamStability}}</div>
+<div class="l">Param Stability</div>
+</div>
+</div>
+
+<!-- WF Fold details table -->
+<div class="mb-6">
+<h2 class="sec-title">Fold Details</h2>
+<div class="overflow-x-auto -mx-3 sm:mx-0">
+<table class="min-w-[900px] sm:min-w-0">
+<thead>
+<tr>
+<th>Fold</th>
+<th>Train Period</th>
+<th>Test Period</th>
+<th>Best Params</th>
+<th>Train PnL</th>
+<th style="border-left:2px solid var(--purple-500, #a855f7);color:#a855f7">OOS Trades</th>
+<th style="color:#a855f7">OOS WR%</th>
+<th style="color:#a855f7">OOS PnL</th>
+<th style="color:#a855f7">OOS Sharpe</th>
+<th>Stable</th>
+</tr>
+</thead>
+<tbody>
+{{range .Folds}}
+<tr>
+<td class="m">{{.Index}}</td>
+<td class="m text-xs">{{.TrainPeriod}}</td>
+<td class="m text-xs">{{.TestPeriod}}</td>
+<td class="m text-xs">{{.BestLabel}}</td>
+<td class="m" style="color:{{pnlFmtColor .TrainPnL}}">{{fmtPnLSigned .TrainPnL}}</td>
+<td class="m" style="border-left:2px solid rgba(168,85,247,0.3)">{{.TestTrades}}</td>
+<td class="m" style="color:{{wrColor .TestWinRate}}">{{fmtPct .TestWinRate}}</td>
+<td class="m" style="color:{{pnlFmtColor .TestPnL}}">{{fmtPnLSigned .TestPnL}}</td>
+<td class="m" style="color:{{sharpeColor .TestSharpe}}">{{fmtFloat2 .TestSharpe}}</td>
+<td class="m">{{if .ParamStable}}<span style="color:#22c55e">Yes</span>{{else}}<span style="color:#ef4444">No</span>{{end}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+</div>
+{{end}}
+</main>
+{{end}}
+
+{{define "backtest"}}
+{{template "layout" .}}
+<body class="bg-base text-slate-100">
+<div id="app">{{template "backtest_content" .}}</div>
+<script>
+// Theme toggle (same as paper page).
+function toggleTheme(){
+  var h=document.documentElement,t=h.dataset.theme==='light'?'dark':'light';
+  h.dataset.theme=t;localStorage.setItem('theme',t);
+}
+// Strategy config override: collect non-empty inputs and submit.
+function applyConfigParams(){
+  var inputs=document.querySelectorAll('.cfg-input');
+  var pairs=[];
+  inputs.forEach(function(el){
+    var k=el.dataset.paramKey,v=el.value.trim();
+    if(v!=='') pairs.push(k+'='+v);
+  });
+  document.getElementById('paramsInput').value=pairs.join(',');
+  document.getElementById('backtestForm').submit();
+}
+// Reset all config override inputs.
+function resetConfigParams(){
+  document.querySelectorAll('.cfg-input').forEach(function(el){el.value='';});
+  document.getElementById('paramsInput').value='';
+}
+// Copy config YAML to clipboard.
+function copyConfigYAML(btn){
+  var text=document.getElementById('configYAML').textContent;
+  navigator.clipboard.writeText(text).then(function(){
+    btn.textContent='Copied!';
+    setTimeout(function(){btn.textContent='Copy';},1500);
+  });
+}
+// Mark body ready for animations.
+document.body.classList.add('ready');
+</script>
+</body></html>
+{{end}}

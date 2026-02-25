@@ -1,0 +1,13 @@
+{{define "hold_reasons"}}
+{{if .HoldReasons}}
+<div class="mb-7"><details><summary class="text-sm text-slate-400 pb-1.5 border-b border-slate-700 list-none flex items-center gap-2">
+<svg class="w-3 h-3 transition-transform duration-200 details-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
+Hold Reasons <span class="text-slate-500">— {{len .HoldReasons}} types, {{.TotalHolds}} total ({{.EvalCount}} evals)</span></summary>
+<table class="mt-2.5"><tr><th>Reason</th><th>Count</th><th>%</th><th></th></tr>
+{{range .HoldReasons}}
+<tr><td>{{.Reason}}</td><td class="m">{{.Count}}</td><td class="m">{{fmtPct .Pct}}</td>
+<td><div class="bar"><span style="width:{{fmtBarWidth .Pct}};background:var(--text-muted)"></span></div></td></tr>
+{{end}}
+</table></details></div>
+{{end}}
+{{end}}

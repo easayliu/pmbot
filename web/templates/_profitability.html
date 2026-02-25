@@ -1,0 +1,29 @@
+{{define "profitability"}}
+{{if .ProfitSim}}
+<div class="mb-7"><h2 class="sec-title">Profitability by Buy Price</h2>
+<p class="text-slate-500 text-[13px] mb-3">Based on {{.Wins}} wins / {{.Losses}} losses (win rate {{fmtPct .ObservedWR}}). Breakeven price = <span class="text-amber-500 font-bold">{{fmtPrice2 .BreakevenPrice}}</span>. Each row simulates $1 cost per trade at that price.</p>
+<div class="hidden md:block overflow-x-auto">
+<table><tr><th>Buy Price</th><th>Win Profit</th><th>Loss Cost</th><th>Need WR</th><th>Total P&amp;L</th><th>Per Trade</th><th class="hide-mob"></th></tr>
+{{range .ProfitSim}}
+<tr{{if .IsProfitable}} style="background:var(--profit-row-bg)"{{end}}><td class="m">{{fmtPrice2 .BuyPrice}}{{if .IsBreakeven}} ◀ BE{{end}}</td><td class="m g">{{fmtFloat4 .WinProfit}}</td><td class="m r">-$1.00</td>
+<td class="m" style="color:{{invWrColor .NeedWR}}">{{fmtPct .NeedWR}}</td>
+<td class="m" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</td>
+<td class="m" style="color:{{pnlFmtColor .PerTrade}}">{{fmtFloat4 .PerTrade}}</td>
+<td class="hide-mob"><div class="bar"><span style="width:{{fmtBarWidth .BarWidth}};background:{{pnlFmtColor .TotalPnL}}"></span></div></td></tr>
+{{end}}
+</table></div>
+<div class="md:hidden space-y-2">
+{{range .ProfitSim}}
+<div class="mob-card"{{if .IsProfitable}} style="background:var(--profit-row-bg)"{{end}}>
+<div class="flex justify-between items-center mb-1.5"><span class="m font-bold text-sm">{{fmtPrice2 .BuyPrice}}{{if .IsBreakeven}} <span class="text-amber-500">◀ BE</span>{{end}}</span><span class="m font-bold" style="color:{{pnlFmtColor .TotalPnL}}">{{fmtPnL .TotalPnL}}</span></div>
+<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+<span>Win <span class="g m">{{fmtFloat4 .WinProfit}}</span></span>
+<span>Need WR <span class="m" style="color:{{invWrColor .NeedWR}}">{{fmtPct .NeedWR}}</span></span>
+<span>Per Trade <span class="m" style="color:{{pnlFmtColor .PerTrade}}">{{fmtFloat4 .PerTrade}}</span></span>
+</div>
+</div>
+{{end}}
+</div>
+</div>
+{{end}}
+{{end}}

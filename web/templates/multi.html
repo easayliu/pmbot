@@ -1,0 +1,39 @@
+{{define "multi_content"}}
+{{template "header" .}}
+<main class="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-8">
+<div class="mb-4 md:mb-8">
+<h1 class="text-base sm:text-lg md:text-2xl font-bold text-slate-100 mb-2 md:mb-1.5">Multi-Price Paper Trading</h1>
+<!-- Desktop: inline row -->
+<div class="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+<span class="text-slate-400">Started <span class="m text-slate-200" data-live="start">{{.StartTime}}</span></span>
+<span class="text-slate-600">·</span>
+<span class="text-slate-400">Now <span class="m text-slate-200" data-live="clock">{{.CurrentTime}}</span></span>
+<span class="text-slate-600">·</span>
+<span class="text-slate-400"><span class="m text-slate-200">{{.SlotCount}}</span> slots</span>
+<span class="text-slate-600">·</span>
+<span class="text-slate-500 text-xs" data-live="tz"></span>
+</div>
+<!-- Mobile: compact meta grid -->
+<div class="sm:hidden grid grid-cols-3 gap-1.5">
+<div class="meta-pill"><span class="meta-k">Started</span><span class="m meta-v" data-live="start">{{.StartTime}}</span></div>
+<div class="meta-pill"><span class="meta-k">Now</span><span class="m meta-v" data-live="clock">{{.CurrentTime}}</span></div>
+<div class="meta-pill"><span class="meta-k">Slots</span><span class="m meta-v">{{.SlotCount}}</span></div>
+</div>
+<div class="sm:hidden text-xs text-slate-500 mt-1 ml-1" data-live="tz"></div>
+</div>
+{{template "window_results" .}}
+{{template "price_comparison" .}}
+{{range .SlotDetails}}
+{{template "slot_detail" .}}
+{{end}}
+{{template "history" .}}
+</main>
+{{end}}
+
+{{define "multi"}}
+{{template "layout" .}}
+<body class="bg-base text-slate-100">
+<div id="app" data-start-ts="{{.StartUnix}}" data-server-tz="{{.ServerTZ}}">{{template "multi_content" .}}</div>
+<script src="/static/paper.js"></script>
+</body></html>
+{{end}}
