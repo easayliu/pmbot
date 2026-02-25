@@ -10,6 +10,12 @@ Polymarket 5-minute BTC Up/Down trading bot.
 curl -fsSL https://raw.githubusercontent.com/easayliu/pmbot/main/install.sh | sudo bash
 ```
 
+Install UPX-compressed binary (smaller, linux/amd64 only):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/easayliu/pmbot/main/install.sh | sudo UPX=1 bash
+```
+
 Install a specific version:
 
 ```bash

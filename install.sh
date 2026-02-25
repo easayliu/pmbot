@@ -53,6 +53,12 @@ download_release() {
     arch="$(detect_arch)"
     asset_name="${APP_NAME}-${os}-${arch}"
 
+    # Use UPX-compressed binary if requested via UPX=1.
+    if [[ "${UPX:-0}" == "1" ]]; then
+        asset_name="${asset_name}-upx"
+    fi
+
+    local url
     if [[ "${version}" == "latest" ]]; then
         url="https://github.com/${REPO}/releases/latest/download/${asset_name}"
     else
@@ -167,6 +173,12 @@ info "installed systemd unit"
 systemctl daemon-reload
 systemctl enable "${APP_NAME}.service"
 info "service enabled"
+
+# Restart if already running, otherwise leave stopped for first-time setup.
+if systemctl is-active --quiet "${APP_NAME}.service"; then
+    systemctl restart "${APP_NAME}.service"
+    info "service restarted"
+fi
 
 echo ""
 info "installation complete!"
