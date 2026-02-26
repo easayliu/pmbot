@@ -412,6 +412,7 @@ var paramAliases = []struct{ key, short string }{
 	{"mean_rev_sigma", "mrs"},
 	{"streak_len", "sl"},
 	{"streak_discount", "sd"},
+	{"min_spread", "ms"},
 }
 
 // resolveParamKey converts a short alias (e.g. "vs") to its full config key

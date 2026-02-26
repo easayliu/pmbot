@@ -348,6 +348,10 @@ func (e *Engine) Run(ctx context.Context) error {
 				continue
 			}
 			e.snapshots.Update(evt)
+			// Drain queued events to coalesce rapid price updates into
+			// a single evaluate call. This prevents channel backup when
+			// price_change events arrive faster than evaluate() runs.
+			e.drainWSEvents()
 			e.evaluate(ctx)
 
 		case tick := <-priceTicks:
@@ -381,6 +385,28 @@ func (e *Engine) wsEvents() <-chan ws.MarketEvent {
 		return nil
 	}
 	return e.wsClient.Events()
+}
+
+// drainWSEvents consumes all queued WS events from the channel, applying
+// snapshot updates for each. This coalesces bursts of price_change events
+// so that evaluate() is called only once per batch.
+func (e *Engine) drainWSEvents() {
+	ch := e.wsEvents()
+	if ch == nil {
+		return
+	}
+	for {
+		select {
+		case evt := <-ch:
+			if evt.EventType == ws.EventMarketResolved {
+				e.handleMarketResolved(evt)
+				continue
+			}
+			e.snapshots.Update(evt)
+		default:
+			return
+		}
+	}
 }
 
 // rotateMarket resolves the current slug and, if it changed, re-subscribes WS.
@@ -677,6 +703,74 @@ func (e *Engine) logDashboard(state strategy.MarketState) {
 
 // emitDashboard formats and writes a single structured dashboard log line.
 func (e *Engine) emitDashboard(
+	state strategy.MarketState, sig strategy.Signal,
+	effective strategy.Action, filled, transition bool,
+) {
+	stratName := e.paperSlots[0].strategy.Name()
+	switch stratName {
+	case "spread":
+		e.emitDashboardSpread(state, sig, effective, filled, transition)
+	default:
+		e.emitDashboardBTCUpDown(state, sig, effective, filled, transition)
+	}
+}
+
+// emitDashboardSpread emits a compact tick log for the spread strategy.
+// Only shows fields relevant to spread: btc, remain, yes_ask, no_ask, spread, state.
+func (e *Engine) emitDashboardSpread(
+	state strategy.MarketState, sig strategy.Signal,
+	effective strategy.Action, filled, transition bool,
+) {
+	cs := state.Candles
+
+	args := make([]any, 0, 16)
+	args = append(args, "btc", fmt.Sprintf("%.0f", e.btcPrice))
+	if !e.lastTickTime.IsZero() {
+		args = append(args, "tick_age", fmt.Sprintf("%.1fs", time.Since(e.lastTickTime).Seconds()))
+	}
+
+	// Window timing.
+	if cs.Current5m != "Unknown" {
+		args = append(args, "remain", fmt.Sprintf("%ds", int(cs.Remaining5m.Seconds())))
+	}
+
+	// Market prices and spread.
+	if len(state.Markets) > 0 {
+		m := state.Markets[0]
+		if m.BestAsk > 0 || m.NoBestAsk > 0 {
+			args = append(args,
+				"yes_ask", fmt.Sprintf("%.2f", m.BestAsk),
+				"no_ask", fmt.Sprintf("%.2f", m.NoBestAsk),
+				"spread", fmt.Sprintf("%.2f", math.Abs(m.BestAsk-m.NoBestAsk)),
+			)
+		}
+	}
+
+	// Result: signal event or tick heartbeat with hold reason.
+	if effective == strategy.Buy && transition {
+		args = append(args,
+			"signal", "BUY",
+			"side", e.paperSide(sig.TokenID),
+			"price", fmt.Sprintf("%.2f", sig.Price),
+			"cost", fmt.Sprintf("%.2f", sig.MaxCost),
+			"reason", sig.Reason,
+		)
+	} else {
+		botState := "scanning"
+		if filled {
+			botState = "filled"
+		}
+		args = append(args, "state", botState)
+		if !filled && sig.Reason != "" {
+			args = append(args, "hold", briefHoldCode(sig.Reason))
+		}
+	}
+
+	slog.Info("tick", args...)
+}
+
+// emitDashboardBTCUpDown emits the full tick log for the btc_updown strategy.
+func (e *Engine) emitDashboardBTCUpDown(
 	state strategy.MarketState, sig strategy.Signal,
 	effective strategy.Action, filled, transition bool,
 ) {

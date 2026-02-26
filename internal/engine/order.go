@@ -69,19 +69,31 @@ func (om *OrderManager) Execute(ctx context.Context, sig strategy.Signal, slotLa
 		// Use market price for FAK so the order fills immediately.
 		execPrice = marketPrice
 
-		// Apply price buffer for BUY FAK orders to compensate for orderbook
-		// staleness. Cap at EntryLimit so we never exceed the strategy's ceiling.
-		if sig.Side == clob.SideBuy {
-			tickSize := parseFloat(sig.TickSize)
-			if tickSize > 0 {
-				buffer := float64(om.fakPriceBufferTicks) * tickSize
+		// Apply price buffer for FAK orders to compensate for orderbook
+		// staleness so the order fills even if the book moves slightly.
+		tickSize := parseFloat(sig.TickSize)
+		if tickSize > 0 {
+			buffer := float64(om.fakPriceBufferTicks) * tickSize
+			if sig.Side == clob.SideBuy {
+				// BUY: raise price above best ask. Cap at EntryLimit.
 				buffered := execPrice + buffer
 				if sig.EntryLimit > 0 && buffered > sig.EntryLimit {
 					buffered = sig.EntryLimit
 				}
 				if buffered <= 1.0 && buffered > execPrice {
 					slog.Debug("fak price buffer applied",
-						"slot", slotLabel,
+						"slot", slotLabel, "side", sig.Side,
+						"original", fmt.Sprintf("%.4f", execPrice),
+						"buffered", fmt.Sprintf("%.4f", buffered),
+						"buffer_ticks", om.fakPriceBufferTicks)
+					execPrice = buffered
+				}
+			} else {
+				// SELL: lower price below best bid to increase fill probability.
+				buffered := execPrice - buffer
+				if buffered >= tickSize && buffered < execPrice {
+					slog.Debug("fak price buffer applied",
+						"slot", slotLabel, "side", sig.Side,
 						"original", fmt.Sprintf("%.4f", execPrice),
 						"buffered", fmt.Sprintf("%.4f", buffered),
 						"buffer_ticks", om.fakPriceBufferTicks)

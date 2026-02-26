@@ -254,7 +254,7 @@ func (s *BTCUpDownStrategy) Evaluate(state MarketState) Signal {
 		return Signal{Action: Hold, Reason: "no_data: market data unavailable"}
 	}
 
-	mkt, found := s.findUpDownMarket(state.Markets)
+	mkt, found := findUpDownMarket(state.Markets)
 	if !found {
 		return Signal{Action: Hold, Reason: "no_market: Up/Down market not found"}
 	}
@@ -803,7 +803,7 @@ var upDownRe = regexp.MustCompile(`(?i)\b(go\s+up|higher|increase|rise)\b`)
 // findUpDownMarket finds the market representing the Up/Down binary outcome.
 // For 5m up/down events (the common case), the engine resolves to a single market
 // where YES = Up and NO = Down, so single-market is checked first.
-func (s *BTCUpDownStrategy) findUpDownMarket(markets []MarketInfo) (MarketInfo, bool) {
+func findUpDownMarket(markets []MarketInfo) (MarketInfo, bool) {
 	if len(markets) == 1 {
 		return markets[0], true
 	}

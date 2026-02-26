@@ -155,6 +155,47 @@ func BuildFromConfig(cfg config.StrategyConfig) (Strategy, error) {
 			EarlyExitMinHoldSec: earlyExitMinHoldSec,
 		}, nil
 
+	case "spread":
+		parseFloat := func(key string) (float64, error) {
+			v, ok := cfg.Params[key]
+			if !ok || v == "" {
+				return 0, nil
+			}
+			f, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return 0, fmt.Errorf("parse %s: %w", key, err)
+			}
+			return f, nil
+		}
+
+		maxCost, err := parseFloat("max_cost")
+		if err != nil {
+			return nil, err
+		}
+		entryPrice, err := parseFloat("entry_price")
+		if err != nil {
+			return nil, err
+		}
+		lateWindowSec, err := parseFloat("late_window_sec")
+		if err != nil {
+			return nil, err
+		}
+		minSpread, err := parseFloat("min_spread")
+		if err != nil {
+			return nil, err
+		}
+
+		strat := &SpreadStrategy{
+			MaxCost:       maxCost,
+			EntryPrice:    entryPrice,
+			LateWindowSec: lateWindowSec,
+			MinSpread:     minSpread,
+		}
+		if err := strat.Validate(); err != nil {
+			return nil, err
+		}
+		return strat, nil
+
 	default:
 		return nil, fmt.Errorf("unknown strategy: %s", cfg.Name)
 	}

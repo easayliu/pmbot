@@ -13,6 +13,7 @@ feed: {}
   # Default: Polymarket RTDS Chainlink (matches settlement oracle).
   # No config needed — just leave feed empty.
 
+# --- Option A: btc_updown (trend-following) ---
 strategy:
   name: "btc_updown"
   params:
@@ -28,3 +29,13 @@ strategy:
     trend_discount: "0.7"        # threshold discount when rolling trend confirms
     entry_prices: "0.95"         # only buys when ask=0.95 (each slot auto-binds its own price)
     live_prices: "0.95"          # this slot places real orders
+
+# --- Option B: spread (late-window price spread) ---
+# strategy:
+#   name: "spread"
+#   params:
+#     max_cost: "1.00"           # max cost per order ($)
+#     late_window_sec: "30"      # only trade in last 30s of the 5m window
+#     min_spread: "0.40"         # min |Up_ask - Down_ask| to trigger
+#     entry_prices: "0.80"       # max price willing to pay
+#     live_prices: "0.80"        # this slot places real orders
