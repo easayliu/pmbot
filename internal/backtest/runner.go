@@ -426,10 +426,21 @@ func resolveParamKey(key string) string {
 	return key
 }
 
+// spreadLabelKeys defines which params appear in labels for the spread strategy.
+var spreadLabelKeys = []struct{ key, short string }{
+	{"entry_price", "ep"},
+	{"min_spread", "ms"},
+	{"late_window_sec", "lws"},
+}
+
 // makeLabel creates a short label from key strategy params.
 func makeLabel(cfg config.StrategyConfig) string {
+	labelKeys := paramAliases[:4] // default: btc_updown keys
+	if cfg.Name == "spread" {
+		labelKeys = spreadLabelKeys
+	}
 	var parts []string
-	for _, kv := range paramAliases[:4] {
+	for _, kv := range labelKeys {
 		if v, ok := cfg.Params[kv.key]; ok && v != "" {
 			parts = append(parts, kv.short+"="+v)
 		}
