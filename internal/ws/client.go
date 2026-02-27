@@ -25,37 +25,58 @@ const (
 )
 
 // Client manages a WebSocket connection to Polymarket with auto-reconnect.
+// Market data events are written directly to the SnapshotStore; a notify
+// channel (buffer=1) signals the Engine that new data is available.
+// market_resolved events are delivered through a dedicated channel.
 type Client struct {
-	url      string
-	assets   []string // token IDs to subscribe
-	eventsCh chan MarketEvent
-	cancel   context.CancelFunc // set by Run, used by Stop
+	url        string
+	assets     []string // token IDs to subscribe
+	snapshots  *SnapshotStore
+	notify     chan struct{}    // buffer=1, coalescing signal for new data
+	resolvedCh chan MarketEvent // buffer=8, dedicated channel for market_resolved
+	done       chan struct{}    // closed when Run() exits
+	cancel     context.CancelFunc
 }
 
 // NewClient creates a new WS client for the given asset IDs.
-func NewClient(assetIDs []string) *Client {
+// The client writes market data directly to the provided SnapshotStore.
+func NewClient(assetIDs []string, snapshots *SnapshotStore) *Client {
 	return &Client{
-		url:      DefaultURL,
-		assets:   assetIDs,
-		eventsCh: make(chan MarketEvent, 4096),
+		url:        DefaultURL,
+		assets:     assetIDs,
+		snapshots:  snapshots,
+		notify:     make(chan struct{}, 1),
+		resolvedCh: make(chan MarketEvent, 8),
+		done:       make(chan struct{}),
 	}
 }
 
-// Events returns the channel that receives market events.
-func (c *Client) Events() <-chan MarketEvent {
-	return c.eventsCh
+// Notify returns a channel that receives a signal when new market data
+// has been written to the SnapshotStore. Multiple rapid updates coalesce
+// into a single signal.
+func (c *Client) Notify() <-chan struct{} {
+	return c.notify
 }
 
-// Stop cancels the client's context, causing Run to exit.
+// Resolved returns the channel that receives market_resolved events.
+func (c *Client) Resolved() <-chan MarketEvent {
+	return c.resolvedCh
+}
+
+// Stop cancels the client's context and waits for Run to exit,
+// ensuring no further writes to SnapshotStore after Stop returns.
 func (c *Client) Stop() {
 	if c.cancel != nil {
 		c.cancel()
 	}
+	<-c.done
 }
 
 // Run connects to the WebSocket and processes messages until ctx is cancelled.
 // It automatically reconnects on disconnection.
 func (c *Client) Run(ctx context.Context) {
+	defer close(c.done)
+
 	ctx, c.cancel = context.WithCancel(ctx)
 	backoff := initialBackoff
 
@@ -92,6 +113,15 @@ func (c *Client) Run(ctx context.Context) {
 			// Reset backoff for fast reconnect — the server is alive.
 			backoff = initialBackoff
 		}
+	}
+}
+
+// sendNotify sends a non-blocking signal on the notify channel.
+// If a signal is already pending it is a no-op (coalescing).
+func (c *Client) sendNotify() {
+	select {
+	case c.notify <- struct{}{}:
+	default:
 	}
 }
 
@@ -199,6 +229,17 @@ func (c *Client) connect(ctx context.Context) error {
 			if e.EventType == "" {
 				continue
 			}
+
+			// market_resolved → dedicated channel (never dropped).
+			if e.EventType == EventMarketResolved {
+				select {
+				case c.resolvedCh <- e:
+				default:
+					slog.Warn("ws resolved channel full, dropping event")
+				}
+				continue
+			}
+
 			// Flatten price_change events: the server nests per-asset data
 			// inside a price_changes[] array with no top-level asset_id.
 			// Split each entry into an independent MarketEvent so
@@ -213,21 +254,17 @@ func (c *Client) connect(ctx context.Context) error {
 						BestBid:   pc.BestBid,
 						BestAsk:   pc.BestAsk,
 					}
-					select {
-					case c.eventsCh <- flat:
-					default:
-						slog.Warn("ws event channel full, dropping event", "type", flat.EventType)
-					}
+					c.snapshots.Update(flat)
 				}
 				continue
 			}
-			select {
-			case c.eventsCh <- e:
-			default:
-				// Drop if channel full — strategy will catch up.
-				slog.Warn("ws event channel full, dropping event", "type", e.EventType)
-			}
+
+			// All other market data events → direct update.
+			c.snapshots.Update(e)
 		}
+
+		// Signal the engine once per WS message batch.
+		c.sendNotify()
 	}
 }
 

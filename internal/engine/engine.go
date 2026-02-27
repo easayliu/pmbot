@@ -342,17 +342,12 @@ func (e *Engine) Run(ctx context.Context) error {
 			}
 			return nil
 
-		case evt := <-e.wsEvents():
-			if evt.EventType == ws.EventMarketResolved {
-				e.handleMarketResolved(evt)
-				continue
-			}
-			e.snapshots.Update(evt)
-			// Drain queued events to coalesce rapid price updates into
-			// a single evaluate call. This prevents channel backup when
-			// price_change events arrive faster than evaluate() runs.
-			e.drainWSEvents()
+		case <-e.wsNotify():
+			// SnapshotStore already updated by ws.Client; just evaluate.
 			e.evaluate(ctx)
+
+		case evt := <-e.wsResolved():
+			e.handleMarketResolved(evt)
 
 		case tick := <-priceTicks:
 			e.btcPrice = tick.Price
@@ -379,34 +374,20 @@ func (e *Engine) Run(ctx context.Context) error {
 	}
 }
 
-// wsEvents returns the WS events channel, or a nil channel if no client is active.
-func (e *Engine) wsEvents() <-chan ws.MarketEvent {
+// wsNotify returns the WS notify channel, or nil if no client is active.
+func (e *Engine) wsNotify() <-chan struct{} {
 	if e.wsClient == nil {
 		return nil
 	}
-	return e.wsClient.Events()
+	return e.wsClient.Notify()
 }
 
-// drainWSEvents consumes all queued WS events from the channel, applying
-// snapshot updates for each. This coalesces bursts of price_change events
-// so that evaluate() is called only once per batch.
-func (e *Engine) drainWSEvents() {
-	ch := e.wsEvents()
-	if ch == nil {
-		return
+// wsResolved returns the WS resolved channel, or nil if no client is active.
+func (e *Engine) wsResolved() <-chan ws.MarketEvent {
+	if e.wsClient == nil {
+		return nil
 	}
-	for {
-		select {
-		case evt := <-ch:
-			if evt.EventType == ws.EventMarketResolved {
-				e.handleMarketResolved(evt)
-				continue
-			}
-			e.snapshots.Update(evt)
-		default:
-			return
-		}
-	}
+	return e.wsClient.Resolved()
 }
 
 // rotateMarket resolves the current slug and, if it changed, re-subscribes WS.
@@ -457,7 +438,7 @@ func (e *Engine) rotateMarket(ctx context.Context) error {
 		assetIDs = append(assetIDs, m.yesTokenID, m.noTokenID)
 	}
 	assetIDs = append(assetIDs, e.prevMarketTokens...)
-	e.wsClient = ws.NewClient(assetIDs)
+	e.wsClient = ws.NewClient(assetIDs, e.snapshots)
 	go e.wsClient.Run(ctx)
 
 	// Refresh positions for new markets.
