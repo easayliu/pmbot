@@ -1334,7 +1334,8 @@ func (e *Engine) startReportServer() {
 	}
 	e.paperHandler = NewMultiPaperHandler(papers, e.store, e.cfg.DryRun)
 	mux.Handle("/paper", e.paperHandler)
-	mux.HandleFunc("/api/paper/stream", e.paperHandler.ServeSSE)
+	mux.HandleFunc("/api/paper/data", e.paperHandler.ServeAPI)
+	mux.HandleFunc("/api/paper/stream", e.paperHandler.ServeSSEJSON)
 
 	// Optional backtest handler injected via SetExtraHandler.
 	if e.extraHandler != nil {
@@ -1346,6 +1347,14 @@ func (e *Engine) startReportServer() {
 			bt.SetLiveStatsFunc(e.liveHeaderStats)
 		}
 		mux.Handle("/backtest", e.extraHandler)
+
+		// JSON API for backtest data.
+		type apiServable interface {
+			ServeAPI(http.ResponseWriter, *http.Request)
+		}
+		if api, ok := e.extraHandler.(apiServable); ok {
+			mux.HandleFunc("/api/backtest/data", api.ServeAPI)
+		}
 	}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

@@ -3,7 +3,6 @@ package engine
 import (
 	"bytes"
 	"fmt"
-	"hash/fnv"
 	"html/template"
 	"log/slog"
 	"math"
@@ -1094,127 +1093,52 @@ func NewMultiPaperHandler(papers []*PaperTrader, st *store.Store, dryRun bool) *
 	return &MultiPaperHandler{papers: papers, store: st, dryRun: dryRun}
 }
 
-// ServeHTTP generates the combined multi-price report (full page, loaded once).
+// ServeHTTP serves the SPA shell page. Data is loaded via /api/paper/data.
 func (mp *MultiPaperHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	funcMap := TemplateFuncMap()
 	tmpl := web.Templates(funcMap)
 
+	// Minimal data for the SPA shell template.
+	type shellData struct {
+		Title    string
+		StartUnix int64
+		ServerTZ  string
+	}
+
+	var sd shellData
 	if len(mp.papers) == 1 {
 		pt := mp.papers[0]
 		pt.mu.RLock()
-		data := pt.buildPageData()
-		pt.mu.RUnlock()
-		data.DryRun = mp.dryRun
-		mp.populateWindowResults(&data)
-		mp.populateHistory(&data)
-		if err := tmpl.ExecuteTemplate(w, "paper", data); err != nil {
-			slog.Error("template execution failed", "err", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
+		sd.Title = "Paper Trading Report"
+		if pt.label != "" {
+			sd.Title = fmt.Sprintf("Paper Trading — %s", pt.label)
 		}
-		return
+		sd.StartUnix = pt.startTime.Unix()
+		pt.mu.RUnlock()
+	} else {
+		sd.Title = "Multi-Price Paper Trading"
+		startTime := time.Now()
+		for _, pt := range mp.papers {
+			pt.mu.RLock()
+			if pt.startTime.Before(startTime) {
+				startTime = pt.startTime
+			}
+			pt.mu.RUnlock()
+		}
+		sd.StartUnix = startTime.Unix()
+	}
+	sd.ServerTZ = serverTZString()
+
+	tplName := "paper"
+	if len(mp.papers) > 1 {
+		tplName = "multi"
 	}
 
-	data := mp.buildMultiPageData()
-	if err := tmpl.ExecuteTemplate(w, "multi", data); err != nil {
+	if err := tmpl.ExecuteTemplate(w, tplName, sd); err != nil {
 		slog.Error("template execution failed", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
-}
-
-// renderFragment renders only the dynamic content block (header + main)
-// without the layout shell. Returns the HTML bytes.
-func (mp *MultiPaperHandler) renderFragment() ([]byte, error) {
-	funcMap := TemplateFuncMap()
-	tmpl := web.Templates(funcMap)
-	var buf bytes.Buffer
-
-	if len(mp.papers) == 1 {
-		pt := mp.papers[0]
-		pt.mu.RLock()
-		data := pt.buildPageData()
-		pt.mu.RUnlock()
-		data.DryRun = mp.dryRun
-		mp.populateWindowResults(&data)
-		mp.populateHistory(&data)
-		if err := tmpl.ExecuteTemplate(&buf, "paper_content", data); err != nil {
-			return nil, err
-		}
-		return buf.Bytes(), nil
-	}
-
-	data := mp.buildMultiPageData()
-	if err := tmpl.ExecuteTemplate(&buf, "multi_content", data); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-// ServeSSE handles a Server-Sent Events connection.
-// Updates are event-driven: pushed only when Notify() is called (trade, resolve, etc.).
-// A 30-second keepalive prevents proxy/browser timeouts.
-// Time-dependent fields (duration, current time) are updated client-side.
-func (mp *MultiPaperHandler) ServeSSE(w http.ResponseWriter, r *http.Request) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming not supported", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	changes := mp.addListener()
-	defer mp.removeListener(changes)
-
-	var lastHash uint64
-
-	// Send initial fragment immediately.
-	if html, err := mp.renderFragment(); err == nil {
-		h := fnv.New64a()
-		h.Write(html)
-		lastHash = h.Sum64()
-		writeSSE(w, html)
-		flusher.Flush()
-	}
-
-	keepalive := time.NewTicker(30 * time.Second)
-	defer keepalive.Stop()
-
-	ctx := r.Context()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-changes:
-			// Event-driven: trade recorded, window resolved, correction, etc.
-			html, err := mp.renderFragment()
-			if err != nil {
-				slog.Debug("sse render error", "err", err)
-				continue
-			}
-			h := fnv.New64a()
-			h.Write(html)
-			hash := h.Sum64()
-			if hash == lastHash {
-				continue
-			}
-			lastHash = hash
-			writeSSE(w, html)
-			flusher.Flush()
-		case <-keepalive.C:
-			fmt.Fprintf(w, ": keepalive\n\n")
-			flusher.Flush()
-		}
-	}
-}
-
-// writeSSE writes an SSE data event with multi-line HTML content.
-func writeSSE(w http.ResponseWriter, html []byte) {
-	// SSE data lines: each line prefixed with "data: ".
-	// Use a single data field with the entire HTML.
-	fmt.Fprintf(w, "data: %s\n\n", bytes.ReplaceAll(html, []byte("\n"), []byte("\ndata: ")))
 }
 
 // populateWindowResults fills window result fields on a PageData.
