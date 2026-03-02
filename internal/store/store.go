@@ -351,9 +351,20 @@ func (s *Store) batchLoadSamples(models []windowModel) ([]WindowWithSamples, err
 	for i, m := range models {
 		ids[i] = m.ID
 	}
+
+	// Query samples in batches to avoid SQLite IN clause limits.
+	const batchSize = 500
 	var allSamples []sampleModel
-	if err := s.db.Where("window_id IN ?", ids).Order("window_id ASC, elapsed_ms ASC").Find(&allSamples).Error; err != nil {
-		return nil, fmt.Errorf("batch query samples: %w", err)
+	for i := 0; i < len(ids); i += batchSize {
+		end := i + batchSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		var batch []sampleModel
+		if err := s.db.Where("window_id IN ?", ids[i:end]).Order("window_id ASC, elapsed_ms ASC").Find(&batch).Error; err != nil {
+			return nil, fmt.Errorf("batch query samples: %w", err)
+		}
+		allSamples = append(allSamples, batch...)
 	}
 
 	sampleMap := make(map[int64][]SampleRow, len(models))

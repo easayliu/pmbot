@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -122,10 +123,6 @@ func Run(strategyCfg config.StrategyConfig, windows []store.WindowWithSamples) (
 			continue
 		}
 
-		sort.Slice(samples, func(i, j int) bool {
-			return samples[i].ElapsedMs < samples[j].ElapsedMs
-		})
-
 		// Reset per-window state.
 		for i := range slots {
 			slots[i].bought = false
@@ -230,7 +227,7 @@ func RunAll(strategyCfg config.StrategyConfig, windows []store.WindowWithSamples
 	results := make([]RunResult, len(configs))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 8)
+	sem := make(chan struct{}, runtime.NumCPU())
 	var firstErr error
 
 	for i, cfg := range configs {
@@ -283,10 +280,6 @@ func runSingle(strategyCfg config.StrategyConfig, windows []store.WindowWithSamp
 		if len(samples) == 0 {
 			continue
 		}
-
-		sort.Slice(samples, func(i, j int) bool {
-			return samples[i].ElapsedMs < samples[j].ElapsedMs
-		})
 
 		bought := false
 		var entryPrice float64
@@ -516,7 +509,7 @@ func Sweep(baseCfg config.StrategyConfig, windows []store.WindowWithSamples, par
 	results := make([]RunResult, len(combos))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 8)
+	sem := make(chan struct{}, runtime.NumCPU())
 	var firstErr error
 
 	for i, combo := range combos {
@@ -597,7 +590,7 @@ func SweepWithSplit(baseCfg config.StrategyConfig, windows []store.WindowWithSam
 	results := make([]SplitRunResult, len(combos))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 8)
+	sem := make(chan struct{}, runtime.NumCPU())
 	var firstErr error
 
 	for i, combo := range combos {
